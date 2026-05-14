@@ -35,7 +35,7 @@ const SEVERITY_COLORS = {
   critical: '#ef4444', major: '#f97316', minor: '#f59e0b', info: '#3b82f6',
 };
 
-function Dashboard({ features }) {
+function Dashboard({ features, aiTools }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -136,6 +136,30 @@ function Dashboard({ features }) {
           </div>
         ))}
       </div>
+
+      {/* Advanced AI Tools (NEW) */}
+      {aiTools && Object.keys(aiTools).length > 0 && (
+        <>
+          <h2 className="dash-section-title">Advanced AI Tools (NEW)</h2>
+          <div className="dash-features-grid">
+            {Object.entries(aiTools).map(([slug, cfg]) => (
+              <div
+                key={slug}
+                className="dash-feature-card"
+                onClick={() => navigate(`/${slug}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter') navigate(`/${slug}`); }}
+              >
+                <div className="dash-feature-icon" style={{ fontSize: 24 }}>{cfg.icon}</div>
+                <h3 className="dash-feature-title">{cfg.title}</h3>
+                <p className="dash-feature-desc">{cfg.subtitle}</p>
+                <FiArrowRight className="dash-feature-arrow" />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Recent Activity */}
       {(stats?.recent_audits?.length > 0 || stats?.recent_issues?.length > 0) && (

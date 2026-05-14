@@ -375,6 +375,100 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- =========================================================================
+-- AI RESULTS (persisted AI call storage)
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS ai_results (
+    id              VARCHAR(36) PRIMARY KEY,
+    entity_type     VARCHAR(100) NOT NULL,
+    entity_id       VARCHAR(255),
+    endpoint        VARCHAR(255) NOT NULL,
+    result_json     JSONB,
+    model           VARCHAR(100),
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =========================================================================
+-- COMPATIBILITY COLUMNS (align schema with route code)
+-- =========================================================================
+
+-- clients: add name, plan, status aliases
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'basic';
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(100);
+UPDATE clients SET name = company_name WHERE name IS NULL;
+UPDATE clients SET plan = subscription_tier WHERE plan = 'basic' AND subscription_tier IS NOT NULL;
+UPDATE clients SET status = CASE WHEN is_active THEN 'active' ELSE 'inactive' END WHERE status = 'active';
+
+-- wcag_checks: add criterion, description, element_selector, recommendation aliases
+ALTER TABLE wcag_checks ADD COLUMN IF NOT EXISTS criterion VARCHAR(50);
+ALTER TABLE wcag_checks ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE wcag_checks ADD COLUMN IF NOT EXISTS element_selector VARCHAR(500);
+ALTER TABLE wcag_checks ADD COLUMN IF NOT EXISTS recommendation TEXT;
+UPDATE wcag_checks SET criterion = criterion_id WHERE criterion IS NULL;
+
+-- accessibility_issues: add type and status aliases
+ALTER TABLE accessibility_issues ADD COLUMN IF NOT EXISTS type VARCHAR(100);
+ALTER TABLE accessibility_issues ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'open';
+UPDATE accessibility_issues SET type = issue_type WHERE type IS NULL;
+UPDATE accessibility_issues SET status = CASE WHEN is_resolved THEN 'resolved' ELSE 'open' END WHERE status = 'open';
+
+-- fix_suggestions: add confidence_score and ai_model aliases
+ALTER TABLE fix_suggestions ADD COLUMN IF NOT EXISTS confidence_score NUMERIC(5,2);
+ALTER TABLE fix_suggestions ADD COLUMN IF NOT EXISTS ai_model VARCHAR(100);
+UPDATE fix_suggestions SET confidence_score = ai_confidence WHERE confidence_score IS NULL;
+
+-- ada_reports: add generated_by, findings (jsonb), recommendations (jsonb) columns
+ALTER TABLE ada_reports ADD COLUMN IF NOT EXISTS generated_by VARCHAR(100);
+ALTER TABLE ada_reports ADD COLUMN IF NOT EXISTS findings JSONB;
+ALTER TABLE ada_reports ADD COLUMN IF NOT EXISTS recommendations JSONB;
+
+-- color_contrast_analyses: add wcag_aa_pass and wcag_aaa_pass aliases
+ALTER TABLE color_contrast_analyses ADD COLUMN IF NOT EXISTS wcag_aa_pass BOOLEAN DEFAULT FALSE;
+ALTER TABLE color_contrast_analyses ADD COLUMN IF NOT EXISTS wcag_aaa_pass BOOLEAN DEFAULT FALSE;
+UPDATE color_contrast_analyses SET wcag_aa_pass = passes_aa WHERE wcag_aa_pass = FALSE;
+UPDATE color_contrast_analyses SET wcag_aaa_pass = passes_aaa WHERE wcag_aaa_pass = FALSE;
+
+-- screen_reader_tests: add element_type, element_selector, expected_announcement, actual_result, status aliases
+ALTER TABLE screen_reader_tests ADD COLUMN IF NOT EXISTS element_type VARCHAR(100);
+ALTER TABLE screen_reader_tests ADD COLUMN IF NOT EXISTS element_selector VARCHAR(500);
+ALTER TABLE screen_reader_tests ADD COLUMN IF NOT EXISTS expected_announcement TEXT;
+ALTER TABLE screen_reader_tests ADD COLUMN IF NOT EXISTS actual_result TEXT;
+ALTER TABLE screen_reader_tests ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';
+
+-- aria_validations: add recommendation, severity, current_value, expected_value aliases
+ALTER TABLE aria_validations ADD COLUMN IF NOT EXISTS current_value VARCHAR(255);
+ALTER TABLE aria_validations ADD COLUMN IF NOT EXISTS expected_value VARCHAR(255);
+ALTER TABLE aria_validations ADD COLUMN IF NOT EXISTS recommendation TEXT;
+ALTER TABLE aria_validations ADD COLUMN IF NOT EXISTS severity VARCHAR(50) DEFAULT 'major';
+
+-- alt_text_generations: add current_alt, generated_alt, context_description, confidence_score, ai_model, status aliases
+ALTER TABLE alt_text_generations ADD COLUMN IF NOT EXISTS current_alt TEXT;
+ALTER TABLE alt_text_generations ADD COLUMN IF NOT EXISTS generated_alt TEXT;
+ALTER TABLE alt_text_generations ADD COLUMN IF NOT EXISTS context_description TEXT;
+ALTER TABLE alt_text_generations ADD COLUMN IF NOT EXISTS confidence_score NUMERIC(5,2);
+ALTER TABLE alt_text_generations ADD COLUMN IF NOT EXISTS ai_model VARCHAR(100);
+ALTER TABLE alt_text_generations ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';
+UPDATE alt_text_generations SET current_alt = original_alt WHERE current_alt IS NULL;
+UPDATE alt_text_generations SET generated_alt = alt_text_generations.generated_alt WHERE generated_alt IS NULL;
+
+-- compliance_certificates: add certificate_type, compliance_level, valid_from, valid_until, issued_by
+ALTER TABLE compliance_certificates ADD COLUMN IF NOT EXISTS certificate_type VARCHAR(100);
+ALTER TABLE compliance_certificates ADD COLUMN IF NOT EXISTS compliance_level VARCHAR(20);
+ALTER TABLE compliance_certificates ADD COLUMN IF NOT EXISTS valid_from TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE compliance_certificates ADD COLUMN IF NOT EXISTS valid_until TIMESTAMPTZ;
+ALTER TABLE compliance_certificates ADD COLUMN IF NOT EXISTS issued_by VARCHAR(100);
+UPDATE compliance_certificates SET compliance_level = level_achieved WHERE compliance_level IS NULL;
+UPDATE compliance_certificates SET valid_until = expires_at WHERE valid_until IS NULL;
+
+-- audit_logs: ensure varchar id and performed_by
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS entity_id_text VARCHAR(255);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS performed_by VARCHAR(255);
+
+-- users: ensure uuid id column works (id is SERIAL, routes store uuid strings — add uuid_id alias)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS uuid_id VARCHAR(36) UNIQUE;
+
 MIGRATIONS
 
 success "All migrations applied"

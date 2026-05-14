@@ -8,8 +8,15 @@ const openRouter = require('../services/openRouterService');
 // GET /api/screen-reader
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM screen_reader_tests ORDER BY created_at DESC');
-    res.json(result.rows);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+    const [result, countResult] = await Promise.all([
+      pool.query('SELECT * FROM screen_reader_tests ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]),
+      pool.query('SELECT COUNT(*) FROM screen_reader_tests'),
+    ]);
+    const total = parseInt(countResult.rows[0].count);
+    res.json({ data: result.rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('Get screen reader tests error:', err);
     res.status(500).json({ error: 'Internal server error' });

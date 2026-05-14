@@ -89,7 +89,7 @@ function getInitials(name) {
     .join('');
 }
 
-function Sidebar({ user, features, onLogout }) {
+function Sidebar({ user, features, aiTools, onLogout }) {
   const enabledPaths = new Set();
   if (features && Array.isArray(features)) {
     features.forEach((f) => { if (f.path) enabledPaths.add(f.path); });
@@ -98,6 +98,11 @@ function Sidebar({ user, features, onLogout }) {
     if (!features || features.length === 0) return true;
     return enabledPaths.has(path);
   };
+
+  // Build AI Tools section dynamically from aiTools config
+  const aiToolsItems = aiTools
+    ? Object.entries(aiTools).map(([slug, cfg]) => ({ path: slug, title: cfg.title, icon: cfg.icon }))
+    : [];
 
   return (
     <nav className="sidebar" aria-label="Main navigation">
@@ -152,6 +157,25 @@ function Sidebar({ user, features, onLogout }) {
             </div>
           );
         })}
+
+        {/* AI Tools (NEW) */}
+        {aiToolsItems.length > 0 && (
+          <div className="sidebar-nav-section">
+            <div className="sidebar-nav-section-title">ADVANCED AI TOOLS</div>
+            {aiToolsItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={`/${item.path}`}
+                className={({ isActive }) =>
+                  `sidebar-nav-link${isActive ? ' active' : ''}`
+                }
+              >
+                <span className="nav-icon" style={{ fontSize: 14 }}>{item.icon}</span>
+                <span>{item.title}</span>
+              </NavLink>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Footer - User Info */}

@@ -5,7 +5,136 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
 import FeaturePage from './pages/FeaturePage';
+import AIToolPage from './pages/AIToolPage';
 import { getMe } from './services/api';
+
+// =====================================================
+// NEW Custom Non-CRUD AI Tool configurations
+// =====================================================
+const aiToolConfigs = {
+  'ai-validate-headings': {
+    title: 'Headings Hierarchy Validator',
+    subtitle: 'Check h1→h2→h3 structure, detect skipped levels, suggest fixes',
+    icon: 'H₁',
+    apiCall: 'validateHeadingsAI',
+    method: 'post',
+    fields: [
+      { name: 'url', label: 'Website URL', placeholder: 'https://example.com' },
+      { name: 'htmlContent', label: 'OR HTML Content', type: 'textarea', placeholder: '<h1>Main</h1><h3>Skipped</h3>...', rows: 6, help: 'Provide either URL or raw HTML' },
+    ],
+  },
+  'ai-audit-forms': {
+    title: 'Form Accessibility Auditor',
+    subtitle: 'Validate label associations, required attribute, error messaging',
+    icon: '📝',
+    apiCall: 'auditFormsAI',
+    method: 'post',
+    fields: [
+      { name: 'url', label: 'Website URL', placeholder: 'https://example.com/contact' },
+      { name: 'htmlContent', label: 'OR HTML Content', type: 'textarea', rows: 6 },
+    ],
+  },
+  'ai-prioritize-issues': {
+    title: 'Remediation Priority Ranker',
+    subtitle: 'Rank issues by user impact (critical/major/minor)',
+    icon: '📊',
+    apiCall: 'prioritizeIssuesAI',
+    method: 'post',
+    fields: [
+      { name: 'issues', label: 'Issues (JSON array)', type: 'json', rows: 10, required: true,
+        placeholder: '[{"description": "Missing alt text", "wcag": "1.1.1"}, ...]',
+        help: 'Provide an array of issue objects to prioritize' },
+    ],
+  },
+  'ai-check-link-text': {
+    title: 'Link Text Quality Checker',
+    subtitle: 'Identify generic links ("click here"), suggest descriptive text',
+    icon: '🔗',
+    apiCall: 'checkLinkTextAI',
+    method: 'post',
+    fields: [
+      { name: 'url', label: 'Website URL', placeholder: 'https://example.com' },
+      { name: 'htmlContent', label: 'OR HTML Content', type: 'textarea', rows: 6 },
+    ],
+  },
+  'ai-check-media': {
+    title: 'Media Accessibility Checker',
+    subtitle: 'Verify captions, transcripts, descriptions for audio/video',
+    icon: '🎬',
+    apiCall: 'checkMediaAI',
+    method: 'post',
+    fields: [
+      { name: 'url', label: 'Website URL', placeholder: 'https://example.com/page-with-video' },
+      { name: 'htmlContent', label: 'OR HTML Content', type: 'textarea', rows: 6 },
+    ],
+  },
+  'ai-convert-semantic': {
+    title: 'Semantic HTML Converter',
+    subtitle: 'Suggest semantic replacements (div→section, span→label)',
+    icon: '🏷️',
+    apiCall: 'convertSemanticAI',
+    method: 'post',
+    fields: [
+      { name: 'html', label: 'HTML to Convert', type: 'textarea', rows: 10, required: true,
+        placeholder: '<div class="header"><div class="logo">Logo</div></div>...' },
+    ],
+  },
+  'ai-readability-score': {
+    title: 'Accessibility Readability Score',
+    subtitle: 'Analyze reading level, sentence complexity per WCAG 3.1 readability',
+    icon: '📖',
+    apiCall: 'readabilityScoreAI',
+    method: 'post',
+    fields: [
+      { name: 'text', label: 'Text Content', type: 'textarea', rows: 10, required: true,
+        placeholder: 'Paste page content to analyze...' },
+    ],
+  },
+  'ai-monitoring-dashboard': {
+    title: 'Accessibility Monitoring Dashboard',
+    subtitle: 'Track audit score trends, flag regressions, alert on new issues',
+    icon: '📈',
+    apiCall: 'monitoringDashboardAI',
+    method: 'get',
+    autoLoad: true,
+    fields: [],
+  },
+  'ai-accessible-palette': {
+    title: 'Accessible Color Palette Generator',
+    subtitle: 'Generate a full WCAG AA-compliant color palette from your brand color',
+    icon: '🎨',
+    apiCall: 'generateAccessiblePalette',
+    method: 'post',
+    fields: [
+      { name: 'primary_color', label: 'Brand Color (hex)', placeholder: '#1a73e8', required: true,
+        help: 'Enter a hex color code like #1a73e8' },
+    ],
+  },
+  'ai-remediation-chat': {
+    title: 'AI Remediation Assistant',
+    subtitle: 'Ask questions about any accessibility issue and get code examples',
+    icon: '💬',
+    apiCall: 'remediationChat',
+    method: 'post',
+    fields: [
+      { name: 'issue_id', label: 'Issue ID (optional)', placeholder: 'uuid of the issue for context' },
+      { name: 'question', label: 'Your Question', type: 'textarea', rows: 4, required: true,
+        placeholder: 'How do I fix missing alt text on dynamically loaded images?' },
+    ],
+  },
+  'ai-vpat-generator': {
+    title: 'VPAT Generator',
+    subtitle: 'Generate a Voluntary Product Accessibility Template (VPAT 2.4) document',
+    icon: '📋',
+    apiCall: 'generateVPAT',
+    method: 'post',
+    fields: [
+      { name: 'id', label: 'ADA Report ID', required: true, placeholder: 'UUID of existing ADA report' },
+    ],
+    // Special: this calls generateVPAT(id) not generateVPAT(data)
+    customApiCall: true,
+  },
+};
 
 function App() {
   const [user, setUser] = useState(null);
@@ -203,12 +332,15 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar user={user} features={features} onLogout={() => { localStorage.removeItem('token'); setUser(null); }} />
+      <Sidebar user={user} features={features} aiTools={aiToolConfigs} onLogout={() => { localStorage.removeItem('token'); setUser(null); }} />
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Dashboard features={features} />} />
+          <Route path="/" element={<Dashboard features={features} aiTools={aiToolConfigs} />} />
           {features.map(f => (
             <Route key={f.path} path={`/${f.path}`} element={<FeaturePage config={f} />} />
+          ))}
+          {Object.entries(aiToolConfigs).map(([slug, cfg]) => (
+            <Route key={slug} path={`/${slug}`} element={<AIToolPage config={cfg} />} />
           ))}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

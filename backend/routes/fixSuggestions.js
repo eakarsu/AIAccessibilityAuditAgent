@@ -5,11 +5,18 @@ const pool = require('../db');
 const authenticateToken = require('../middleware/auth');
 const openRouter = require('../services/openRouterService');
 
-// GET /api/fix-suggestions
+// GET /api/fix-suggestions?page=1&limit=20
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM fix_suggestions ORDER BY created_at DESC');
-    res.json(result.rows);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+    const [result, countResult] = await Promise.all([
+      pool.query('SELECT * FROM fix_suggestions ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]),
+      pool.query('SELECT COUNT(*) FROM fix_suggestions'),
+    ]);
+    const total = parseInt(countResult.rows[0].count);
+    res.json({ data: result.rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (err) {
     console.error('Get fix suggestions error:', err);
     res.status(500).json({ error: 'Internal server error' });

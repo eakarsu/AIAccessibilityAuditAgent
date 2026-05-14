@@ -184,30 +184,45 @@ export default function FeaturePage({ config }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [formData, setFormData] = useState({});
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const limit = 20;
 
   const apiModule = api[config.apiName];
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (currentPage = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiModule.getAll();
-      setItems(Array.isArray(res.data) ? res.data : res.data.data || []);
+      const res = await apiModule.getAll({ page: currentPage, limit });
+      if (Array.isArray(res.data)) {
+        setItems(res.data);
+        setPagination(null);
+      } else {
+        setItems(res.data.data || []);
+        setPagination(res.data.pagination || null);
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  }, [apiModule]);
+  }, [apiModule, limit]);
 
   useEffect(() => {
-    fetchItems();
+    setPage(1);
+    fetchItems(1);
     setSelectedItem(null);
     setShowForm(false);
     setAiResult(null);
     setShowAIResult(false);
     setSearchTerm('');
   }, [fetchItems, config.apiName]);
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    fetchItems(newPage);
+  };
 
   const filteredItems = items.filter(item => {
     if (!searchTerm) return true;
@@ -375,6 +390,29 @@ export default function FeaturePage({ config }) {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="fp-pagination">
+          <button
+            className="fp-page-btn"
+            disabled={page <= 1}
+            onClick={() => handlePageChange(page - 1)}
+          >
+            Previous
+          </button>
+          <span className="fp-page-info">
+            Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+          </span>
+          <button
+            className="fp-page-btn"
+            disabled={page >= pagination.totalPages}
+            onClick={() => handlePageChange(page + 1)}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       {showForm && (
