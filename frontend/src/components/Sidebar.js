@@ -158,6 +158,20 @@ function Sidebar({ user, features, aiTools, onLogout }) {
           );
         })}
 
+        {/* Custom Views (always visible) */}
+        <div className="sidebar-nav-section">
+          <div className="sidebar-nav-section-title">CUSTOM</div>
+          <NavLink
+            to="/custom-views"
+            className={({ isActive }) =>
+              `sidebar-nav-link${isActive ? ' active' : ''}`
+            }
+          >
+            <FiBarChart2 className="nav-icon" />
+            <span>A11y Views</span>
+          </NavLink>
+        </div>
+
         {/* AI Tools (NEW) */}
         {aiToolsItems.length > 0 && (
           <div className="sidebar-nav-section">

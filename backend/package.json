@@ -18,6 +18,7 @@
     "html-pdf-node": "^1.0.8",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
+    "pdfkit": "^0.18.0",
     "pg": "^8.13.0",
     "puppeteer": "^24.42.0",
     "uuid": "^10.0.0"

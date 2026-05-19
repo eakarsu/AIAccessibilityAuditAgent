@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
 import FeaturePage from './pages/FeaturePage';
 import AIToolPage from './pages/AIToolPage';
+import CustomViewsPage from './pages/CustomViewsPage';
 import { getMe } from './services/api';
 
 // =====================================================
@@ -342,6 +343,7 @@ function App() {
           {Object.entries(aiToolConfigs).map(([slug, cfg]) => (
             <Route key={slug} path={`/${slug}`} element={<AIToolPage config={cfg} />} />
           ))}
+          <Route path="/custom-views" element={<CustomViewsPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>

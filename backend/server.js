@@ -110,3 +110,6 @@ app.use('/api/gap-client-website-embeddable-badge', require('./routes/gap_client
 app.use('/api/gap-browser-extension-live-scan', require('./routes/gap_browser_extension_live_scan'));
 app.use('/api/gap-outbound-webhooks', require('./routes/gap_outbound_webhooks'));
 app.use('/api/gap-notifications-subsystem', require('./routes/gap_notifications_subsystem'));
+
+// === Custom Views (A11y Views) ===
+app.use('/api/custom-views', require('./routes/customViews'));
