@@ -62,6 +62,7 @@ const sections = [
     items: [
       { path: 'screen-reader', title: 'Screen Reader', icon: 'FiVolume2' },
       { path: 'keyboard-nav', title: 'Keyboard Navigation', icon: 'FiCommand' },
+      { path: 'focus-order-risk', title: 'Focus Order Risk', icon: 'FiCommand' },
     ],
   },
   {

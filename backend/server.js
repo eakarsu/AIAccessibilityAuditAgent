@@ -77,6 +77,7 @@ app.use('/api/alt-text', generalLimiter, require('./routes/altText'));
 app.use('/api/scores', generalLimiter, require('./routes/scores'));
 app.use('/api/certificates', generalLimiter, require('./routes/certificates'));
 app.use('/api/audit-logs', generalLimiter, require('./routes/auditLogs'));
+app.use('/api/focus-order-risk', generalLimiter, require('./routes/focusOrderRisk'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
