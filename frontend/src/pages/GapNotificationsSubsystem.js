@@ -9,6 +9,27 @@ export default function NotificationsSubsystemPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const sampleRequests = [
+      {
+          "label": "Scenario",
+          "value": "Run No notifications subsystem for a realistic customer case.\nContext: a team needs a practical recommendation based on incomplete operating data.\nGoal: identify the best action, key risks, missing information, and expected business impact.\nReturn: summary, prioritized action plan, assumptions, and follow-up questions."
+      },
+      {
+          "label": "Data sample",
+          "value": "Analyze this No notifications subsystem data sample.\nInput records:\n- Record 1: urgent, customer impact high, owner unassigned\n- Record 2: medium priority, blocked by missing data\n- Record 3: recurring issue, automation opportunity\nReturn structured findings, anomalies, recommendations, and confidence."
+      },
+      {
+          "label": "Executive review",
+          "value": "Prepare an executive review for No notifications subsystem.\nAudience: business owner, operations lead, and implementation team.\nInclude impact, risk, estimated effort, decision points, and a concise next-step plan."
+      }
+  ];
+
+  const applySampleRequest = (value) => {
+    setInput(value);
+    setError(null);
+    setResult(null);
+  };
+
   async function run() {
     setLoading(true);
     setError(null);
@@ -36,6 +57,19 @@ export default function NotificationsSubsystemPage() {
     <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>No notifications subsystem</h1>
       <p style={{ color: '#666', marginBottom: '1rem' }}>v0 scaffold. Provide input and click Run.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+          {sampleRequests.map((sample) => (
+            <button
+              key={sample.label}
+              type="button"
+              onClick={() => applySampleRequest(sample.value)}
+              style={{ padding: '6px 10px', background: '#eef2ff', color: '#1e3a8a', border: '1px solid #c7d2fe', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+            >
+              {sample.label}
+            </button>
+          ))}
+        </div>
+
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
