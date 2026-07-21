@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];

@@ -29,12 +29,6 @@ function Login({ onLogin }) {
     }
   };
 
-  const handleAutoFill = () => {
-    setEmail('demo@accessibility.com');
-    setPassword('password123');
-    setError('');
-  };
-
   return (
     <div className="login-page">
       <div className="login-bg-overlay"></div>
@@ -98,14 +92,6 @@ function Login({ onLogin }) {
             )}
           </button>
         </form>
-
-        <div className="login-divider">
-          <span>or</span>
-        </div>
-
-        <button type="button" className="demo-btn" onClick={handleAutoFill}>
-          Auto Fill Demo
-        </button>
 
         <p className="login-footer">
           AI-Powered Accessibility Compliance Platform

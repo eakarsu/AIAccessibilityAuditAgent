@@ -613,12 +613,12 @@ router.get(
   async (req, res) => {
     try {
       const { Pool } = require('pg');
-      const pool = new Pool({
+      const pool = new Pool(process.env.DATABASE_URL ? { connectionString: process.env.DATABASE_URL } : {
         host: process.env.DB_HOST || 'localhost',
         port: process.env.DB_PORT || 5432,
         database: process.env.DB_NAME || 'accessibility_audit',
         user: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || 'postgres',
+        password: process.env.DB_PASSWORD,
       });
 
       // Score trends for last 30 days

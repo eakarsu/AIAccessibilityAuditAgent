@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 const { body, validationResult } = require('express-validator');
 const pool = require('../db');
 const authenticateToken = require('../middleware/auth');
@@ -34,12 +34,11 @@ router.post(
       .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
       .matches(/\d/).withMessage('Password must contain at least one number'),
     body('full_name').notEmpty().withMessage('full_name is required').trim(),
-    body('role').optional().isIn(['admin', 'auditor', 'viewer']).withMessage('Invalid role'),
   ],
   async (req, res) => {
     if (handleValidation(req, res)) return;
     try {
-      const { email, password, full_name, role } = req.body;
+      const { email, password, full_name } = req.body;
 
       const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
       if (existing.rows.length > 0) {
@@ -47,16 +46,16 @@ router.post(
       }
 
       const password_hash = await bcrypt.hash(password, 12);
-      const id = uuidv4();
       const result = await pool.query(
-        'INSERT INTO users (id, email, password_hash, full_name, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, role, created_at',
-        [id, email, password_hash, full_name, role || 'auditor']
+        `INSERT INTO users (email, password_hash, full_name, role, tenant_id)
+         VALUES ($1, $2, $3, 'admin', $4) RETURNING id, email, full_name, role, tenant_id, created_at`,
+        [email, password_hash, full_name, randomUUID()]
       );
 
       const user = result.rows[0];
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
-        JWT_SECRET || 'fallback-dev-secret',
+        { id: user.id, email: user.email, role: user.role, tenantId: user.tenant_id },
+        JWT_SECRET,
         { expiresIn: '24h' }
       );
 
@@ -92,8 +91,8 @@ router.post(
       }
 
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
-        JWT_SECRET || 'fallback-dev-secret',
+        { id: user.id, email: user.email, role: user.role || 'auditor', tenantId: user.tenant_id },
+        JWT_SECRET,
         { expiresIn: '24h' }
       );
 
