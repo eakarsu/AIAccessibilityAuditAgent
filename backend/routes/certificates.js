@@ -111,10 +111,11 @@ router.get('/:siteId/generate', authenticateToken, async (req, res) => {
 
     const formatDate = (d) => d.toISOString().split('T')[0];
 
-    // Check if html-pdf-node is available
+    // Render with the maintained Puppeteer dependency used by the audit routes.
     let pdfBuffer = null;
+    let browser = null;
     try {
-      const htmlPdf = require('html-pdf-node');
+      const puppeteer = require('puppeteer');
       const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,12 +160,17 @@ router.get('/:siteId/generate', authenticateToken, async (req, res) => {
 </body>
 </html>`;
 
-      const options = { format: 'A4' };
-      const file = { content: htmlContent };
-      pdfBuffer = await htmlPdf.generatePdf(file, options);
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      pdfBuffer = Buffer.from(await page.pdf({ format: 'A4' }));
     } catch (pdfErr) {
-      // html-pdf-node not available or failed, return HTML response
       console.warn('PDF generation unavailable:', pdfErr.message);
+    } finally {
+      if (browser) await browser.close();
     }
 
     // Save certificate record
