@@ -68,6 +68,7 @@ const auditRateLimiter = rateLimit({
 
 // Routes
 app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api', generalLimiter, require('./routes/notificationsWebhooks')(require('./middleware/auth')));
 app.use('/api/dashboard', generalLimiter, require('./routes/dashboard'));
 app.use('/api/clients', generalLimiter, require('./routes/clients'));
 app.use('/api/site-audits', auditRateLimiter, require('./routes/siteAudits'));
