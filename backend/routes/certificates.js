@@ -37,16 +37,22 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/certificates
+// Certificates default to draft. An active certificate requires a named human
+// issuer; model output never activates a certificate by itself.
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { client_id, certificate_type, compliance_level, valid_from, valid_until, issued_by, status } = req.body;
     if (!client_id) {
       return res.status(400).json({ error: 'client_id is required' });
     }
+    const certificateStatus = status || 'draft';
+    if (certificateStatus === 'active' && !String(issued_by || '').trim()) {
+      return res.status(400).json({ error: 'issued_by is required to activate a certificate', code: 'certificate_human_approval_required' });
+    }
     const id = uuidv4();
     const result = await pool.query(
       'INSERT INTO compliance_certificates (id, client_id, certificate_type, compliance_level, valid_from, valid_until, issued_by, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [id, client_id, certificate_type, compliance_level, valid_from, valid_until, issued_by, status || 'active']
+      [id, client_id, certificate_type, compliance_level, valid_from, valid_until, issued_by, certificateStatus]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -74,9 +80,21 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // GET /api/certificates/:siteId/generate - ADA compliance certificate generator
+// Requires explicit human approval: a reviewer supplies approved_by and
+// approval_reference after inspecting the evidence. A score alone never issues
+// a certificate.
 router.get('/:siteId/generate', authenticateToken, async (req, res) => {
   try {
     const { siteId } = req.params;
+    const approvedBy = String(req.query.approved_by || req.body?.approved_by || '').trim();
+    const approvalReference = String(req.query.approval_reference || req.body?.approval_reference || '').trim();
+    if (!approvedBy || !approvalReference) {
+      return res.status(403).json({
+        error: 'Human approval required before issuing a certificate',
+        code: 'certificate_human_approval_required',
+        hint: 'Provide approved_by and approval_reference from the reviewer who inspected this audit.',
+      });
+    }
 
     // Fetch latest completed audit for this site (by id or url match)
     const auditResult = await pool.query(
@@ -173,16 +191,18 @@ router.get('/:siteId/generate', authenticateToken, async (req, res) => {
       if (browser) await browser.close();
     }
 
-    // Save certificate record
+    // Save the human-approved certificate record. If persistence fails, do not
+    // hand the operator a certificate document that has no durable record.
     try {
-      const { v4: uuidv4 } = require('uuid');
       await pool.query(
         `INSERT INTO compliance_certificates (id, client_id, certificate_type, compliance_level, valid_from, valid_until, issued_by, status)
-         VALUES ($1, $2, 'ada_compliance', 'AA', $3, $4, 'AI Accessibility Audit Agent', 'active')
-         ON CONFLICT DO NOTHING`,
-        [uuidv4(), audit.client_id, formatDate(auditDate), formatDate(validUntil)]
+         VALUES ($1, $2, 'ada_compliance', 'AA', $3, $4, $5, 'active')`,
+        [uuidv4(), audit.client_id, formatDate(auditDate), formatDate(validUntil), approvedBy]
       );
-    } catch (_) {}
+    } catch (saveErr) {
+      console.error('Certificate persistence failed:', saveErr);
+      return res.status(500).json({ error: 'Certificate was not issued because its record could not be saved' });
+    }
 
     if (pdfBuffer) {
       res.setHeader('Content-Type', 'application/pdf');

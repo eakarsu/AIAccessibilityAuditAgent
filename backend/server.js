@@ -103,6 +103,3 @@ app.listen(PORT, () => {
 });
 
 // Batch-generated stub and gap routes are intentionally not mounted as product APIs.
-
-// === Custom Views (A11y Views) ===
-app.use('/api/custom-views', require('./routes/customViews'));

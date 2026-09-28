@@ -27,23 +27,47 @@ function query(sql, rows = false) {
   return result.stdout.trim();
 }
 
-const adminEmail = String(process.env.PROVISION_ADMIN_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-const adminPassword = String(process.env.PROVISION_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '');
-if (!adminEmail || adminPassword.length < 12) throw new Error('Runtime administrator credentials are required');
-const salt = crypto.randomBytes(16).toString('hex');
-const passwordHash = 'scrypt$' + salt + '$' + crypto.scryptSync(adminPassword, salt, 32).toString('hex');
+// Schema creation and operator provisioning are explicit opt-in operations.
+// Normal boots never run DDL and never rewrite an existing operator password.
+if (String(process.env.RUNTIME_SETUP || '') === '1') {
+  const adminEmail = String(process.env.PROVISION_ADMIN_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const adminPassword = String(process.env.PROVISION_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '');
+  if (!adminEmail || adminPassword.length < 12) throw new Error('Runtime administrator credentials are required when RUNTIME_SETUP=1');
 
-query([
-  'BEGIN;',
-  'CREATE EXTENSION IF NOT EXISTS pgcrypto;',
-  'CREATE TABLE IF NOT EXISTS runtime_app_users(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,display_name TEXT NOT NULL,role TEXT NOT NULL DEFAULT \'user\',active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());',
-  'CREATE TABLE IF NOT EXISTS runtime_app_sessions(token_hash TEXT PRIMARY KEY,user_id UUID NOT NULL REFERENCES runtime_app_users(id) ON DELETE CASCADE,expires_at TIMESTAMPTZ NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());',
-  'CREATE TABLE IF NOT EXISTS runtime_ai_interactions(id BIGSERIAL PRIMARY KEY,user_id UUID NOT NULL REFERENCES runtime_app_users(id),feature TEXT NOT NULL,input JSONB NOT NULL,output JSONB NOT NULL,model TEXT NOT NULL,provider_receipt JSONB NOT NULL DEFAULT \'{}\'::jsonb,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());',
-  'ALTER TABLE runtime_ai_interactions ADD COLUMN IF NOT EXISTS provider_receipt JSONB NOT NULL DEFAULT \'{}\'::jsonb;',
-  'CREATE INDEX IF NOT EXISTS runtime_ai_interactions_user_idx ON runtime_ai_interactions(user_id,created_at DESC);',
-  'INSERT INTO runtime_app_users(email,password_hash,display_name,role,active) VALUES(' + literal(adminEmail) + ',' + literal(passwordHash) + ',\'Runtime Administrator\',\'admin\',TRUE) ON CONFLICT(email) DO UPDATE SET password_hash=EXCLUDED.password_hash,role=\'admin\',active=TRUE;',
-  'COMMIT;'
-].join('\n'));
+  function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    return 'scrypt$' + salt + '$' + crypto.scryptSync(password, salt, 32).toString('hex');
+  }
+
+  // Password hashes are written only on first insert; re-running setup keeps the
+  // operator-chosen password and only reasserts role/active.
+  function provisionUser(email, password, displayName, role) {
+    return 'INSERT INTO runtime_app_users(email,password_hash,display_name,role,active) VALUES(' +
+      literal(email) + ',' + literal(hashPassword(password)) + ',' + literal(displayName) + ',' + literal(role) +
+      ',TRUE) ON CONFLICT(email) DO UPDATE SET role=EXCLUDED.role,active=TRUE;';
+  }
+
+  const statements = [
+    'BEGIN;',
+    'CREATE EXTENSION IF NOT EXISTS pgcrypto;',
+    'CREATE TABLE IF NOT EXISTS runtime_app_users(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,display_name TEXT NOT NULL,role TEXT NOT NULL DEFAULT \'user\',active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());',
+    'CREATE TABLE IF NOT EXISTS runtime_app_sessions(token_hash TEXT PRIMARY KEY,user_id UUID NOT NULL REFERENCES runtime_app_users(id) ON DELETE CASCADE,expires_at TIMESTAMPTZ NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());',
+    'CREATE TABLE IF NOT EXISTS runtime_ai_interactions(id BIGSERIAL PRIMARY KEY,user_id UUID NOT NULL REFERENCES runtime_app_users(id),feature TEXT NOT NULL,input JSONB NOT NULL,output JSONB NOT NULL,model TEXT NOT NULL,provider_receipt JSONB NOT NULL DEFAULT \'{}\'::jsonb,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());',
+    'ALTER TABLE runtime_ai_interactions ADD COLUMN IF NOT EXISTS provider_receipt JSONB NOT NULL DEFAULT \'{}\'::jsonb;',
+    'CREATE INDEX IF NOT EXISTS runtime_ai_interactions_user_idx ON runtime_ai_interactions(user_id,created_at DESC);',
+    provisionUser(adminEmail, adminPassword, 'Runtime Administrator', 'admin'),
+  ];
+
+  const reviewerEmail = String(process.env.PROVISION_REVIEWER_EMAIL || '').trim().toLowerCase();
+  const reviewerPassword = String(process.env.PROVISION_REVIEWER_PASSWORD || '');
+  if (reviewerEmail) {
+    if (reviewerPassword.length < 12) throw new Error('PROVISION_REVIEWER_PASSWORD must be at least 12 characters when a reviewer email is provided');
+    statements.push(provisionUser(reviewerEmail, reviewerPassword, 'Runtime Reviewer', 'reviewer'));
+  }
+
+  statements.push('COMMIT;');
+  query(statements.join('\n'));
+}
 
 function sha(value) {
   return crypto.createHash('sha256').update(value).digest('hex');

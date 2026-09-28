@@ -271,19 +271,11 @@ router.post('/:id/run-ai', authenticateToken, async (req, res) => {
       ).catch(() => {});
     }
 
-    // Auto-issue compliance certificate if score >= 85 and no critical issues
+    // Certificates are never issued from model output. A score can only make a
+    // site eligible; a human must explicitly approve issuance through the
+    // certificates API (see routes/certificates.js).
     const hasCritical = (aiResult.issues || []).some(i => i.severity === 'critical');
-    if ((aiResult.overall_score || 0) >= 85 && !hasCritical) {
-      const certId = uuidv4();
-      const validUntil = new Date();
-      validUntil.setFullYear(validUntil.getFullYear() + 1);
-      await pool.query(
-        `INSERT INTO compliance_certificates (id, client_id, audit_id, certificate_type, compliance_level, valid_from, valid_until, issued_by, status)
-         VALUES ($1, $2, $3, 'wcag-2.1-aa', 'AA', NOW(), $4, 'AI Audit System', 'active')
-         ON CONFLICT DO NOTHING`,
-        [certId, auditData.client_id, req.params.id, validUntil.toISOString()]
-      ).catch(() => {});
-    }
+    const certificateEligible = (aiResult.overall_score || 0) >= 85 && !hasCritical;
 
     // Persist AI result
     await pool.query(
@@ -294,7 +286,16 @@ router.post('/:id/run-ai', authenticateToken, async (req, res) => {
 
     await writeAuditLog('run_ai_audit', 'site_audit', req.params.id, { score: aiResult.overall_score }, req.user.id);
 
-    res.json({ audit: updated.rows[0], ai_result: aiResult, crawled: !!crawledData });
+    res.json({
+      audit: updated.rows[0],
+      ai_result: aiResult,
+      crawled: !!crawledData,
+      certificate_eligibility: {
+        eligible: certificateEligible,
+        requires_human_approval: true,
+        note: 'Automated results do not certify compliance. A reviewer must approve certificate issuance.',
+      },
+    });
   } catch (err) {
     console.error('Run AI audit error:', err);
     await pool.query('UPDATE site_audits SET status = $1 WHERE id = $2', ['failed', req.params.id]).catch(() => {});

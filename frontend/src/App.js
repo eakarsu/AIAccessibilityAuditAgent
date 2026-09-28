@@ -7,7 +7,6 @@ import Sidebar from './components/Sidebar';
 import FeaturePage from './pages/FeaturePage';
 import AIToolPage from './pages/AIToolPage';
 import FocusOrderRisk from './pages/FocusOrderRisk';
-import CustomViewsPage from './pages/CustomViewsPage';
 import { getMe } from './services/api';
 
 import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
@@ -351,7 +350,6 @@ function App() {
             <Route key={slug} path={`/${slug}`} element={<AIToolPage config={cfg} />} />
           ))}
           <Route path="/focus-order-risk" element={<FocusOrderRisk />} />
-          <Route path="/custom-views" element={<CustomViewsPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
