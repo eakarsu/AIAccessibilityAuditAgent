@@ -8,4 +8,10 @@ Only authentication, health, and governed audits are supported by default. Histo
 
 `/api/governed-audits` ingests reproducible axe evidence only for an explicitly authorized public host. It blocks private/internal, credential-bearing, and out-of-scope targets; requires source revision and per-finding evidence; preserves failures and transitions in tenant-scoped audit tables; and requires a different reviewer plus assistive-technology evidence. An automated pass is explicitly not a certification.
 
-The API does not directly crawl user URLs. Authenticated sandboxed browser workers, source-control and issue-tracker integrations, real axe browser regressions, and manual assistive-technology review require configured external systems and qualified reviewers.
+The API does not directly crawl user URLs. Source-control and issue-tracker integrations, live browser regressions, and manual assistive-technology review still require configured external systems and qualified reviewers.
+
+An operator-run worker can produce an axe evidence manifest after written authorization:
+
+`cd backend && npm run governed-scan -- --url https://example.com/page --host example.com --authorization contract:123 --revision git:abc123 --output /secure/path/audit.json`
+
+The worker resolves and pins a public IPv4 address, blocks private and out-of-scope targets, blocks third-party requests and redirects, and writes only rule, selector and evidence digests. It refuses to overwrite an existing file. Import the JSON file on the **Governed Audits** page, then submit it for independent manual review. The source revision and authorization reference are operator assertions; the worker cannot verify them. Blocking third-party resources can omit findings, and an axe run is not an assistive technology test or certification.

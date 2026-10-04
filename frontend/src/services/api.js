@@ -64,6 +64,13 @@ export const generateAltTextAI = (data) => api.post('/alt-text/generate-ai', dat
 export const scheduleAudit = (clientId, data) => api.post(`/clients/${clientId}/schedule-audit`, data);
 export const getClientBadge = (clientId) => api.get(`/clients/${clientId}/badge`);
 
+// Tenant-scoped evidence workflow; the backend enforces reviewer separation.
+export const getGovernedAudits = () => api.get('/governed-audits');
+export const createGovernedAudit = (data, idempotencyKey) =>
+  api.post('/governed-audits', data, { headers: { 'Idempotency-Key': idempotencyKey } });
+export const submitGovernedAudit = (id) => api.post(`/governed-audits/${id}/submit`);
+export const reviewGovernedAudit = (id, data) => api.post(`/governed-audits/${id}/review`, data);
+
 // AI Tool endpoints under /api/ai/*
 export const validateHeadingsAI = (data) => api.post('/ai/validate-headings', data);
 export const auditFormsAI = (data) => api.post('/ai/audit-forms', data);

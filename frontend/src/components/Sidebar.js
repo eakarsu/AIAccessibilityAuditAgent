@@ -42,6 +42,7 @@ const sections = [
   {
     title: 'AUDITING',
     items: [
+      { path: 'governed-audits', title: 'Governed Audits', icon: 'FiShield' },
       { path: 'site-audits', title: 'Site Audits', icon: 'FiSearch' },
       { path: 'wcag-checks', title: 'WCAG Compliance', icon: 'FiCheckCircle' },
       { path: 'issues', title: 'Issues Tracker', icon: 'FiAlertTriangle' },
@@ -130,6 +131,9 @@ function Sidebar({ user, features, aiTools, onLogout }) {
         >
           <FiGrid className="nav-icon" />
           <span>Dashboard</span>
+        </NavLink>
+        <NavLink to="/governed-audits" className={({ isActive }) => `sidebar-nav-link${isActive ? ' active' : ''}`}>
+          <FiShield className="nav-icon" /><span>Governed Audits</span>
         </NavLink>
 
         {/* Feature sections */}
