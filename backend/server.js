@@ -25,7 +25,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api', require('./runtimeAcceptance'));
 
 app.use('/api', (req, res, next) => {
-  const supported = ['/auth', '/health', '/governed-audits'];
+  const supported = ['/auth', '/health', '/governed-audits', '/authorized-remediations', '/report-workspace'];
   if (legacyPrototypeRoutesEnabled || supported.some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`))) return next();
   return res.status(410).json({ error: 'Legacy prototype route is quarantined', code: 'prototype_route_quarantined' });
 });
@@ -88,11 +88,20 @@ app.use('/api/certificates', generalLimiter, require('./routes/certificates'));
 app.use('/api/audit-logs', generalLimiter, require('./routes/auditLogs'));
 app.use('/api/focus-order-risk', generalLimiter, require('./routes/focusOrderRisk'));
 app.use('/api/governed-audits', auditRateLimiter, require('./routes/governedAudits'));
+app.use('/api/authorized-remediations', auditRateLimiter, require('./routes/authorizedRemediations'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // Error handling
+
+// Advisory AI reports only; native execution and approval routes stay unchanged.
+const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
+const aiWorkspaceDatabase = require("./db.js");
+app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
+  pool: aiWorkspaceDatabase, authenticateToken: aiWorkspaceSupport.runtimeSessionAuth(aiWorkspaceDatabase, require("./middleware/auth.js")),
+  aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),
+}));
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'Internal server error', message: err.message });

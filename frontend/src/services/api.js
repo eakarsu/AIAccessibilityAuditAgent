@@ -47,20 +47,20 @@ export const certificatesApi = crud('certificates');
 export const auditLogsApi = crud('audit-logs');
 
 // AI endpoints - match backend routes
-export const runAuditAI = (id) => api.post(`/site-audits/${id}/run-ai`);
+export const runAuditAI = (id, requestOptions = {}) => api.post(`/site-audits/${id}/run-ai`, undefined, requestOptions);
 export const getAuditDiff = (id) => api.get(`/site-audits/${id}/diff`);
 export const crawlAudit = (id, data) => api.post(`/site-audits/${id}/crawl`, data);
-export const evaluateWcagAI = (id) => api.post(`/wcag-checks/${id}/evaluate-ai`);
-export const suggestFixAI = (id) => api.post(`/issues/${id}/suggest-fix-ai`);
+export const evaluateWcagAI = (id, requestOptions = {}) => api.post(`/wcag-checks/${id}/evaluate-ai`, undefined, requestOptions);
+export const suggestFixAI = (id, requestOptions = {}) => api.post(`/issues/${id}/suggest-fix-ai`, undefined, requestOptions);
 export const updateIssueStatus = (id, status) => api.patch(`/issues/${id}/status`, { status });
-export const generateFixAI = (data) => api.post('/fix-suggestions/generate-ai', data);
-export const generateAdaReportAI = (id) => api.post(`/ada-reports/${id}/generate-ai`);
-export const generateVPAT = (id) => api.post(`/ada-reports/${id}/generate-vpat`);
-export const analyzeContrastAI = (data) => api.post('/color-contrast/analyze-ai', data);
-export const testScreenReaderAI = (data) => api.post('/screen-reader/test-ai', data);
-export const testKeyboardNavAI = (data) => api.post('/keyboard-nav/test-ai', data);
-export const validateAriaAI = (data) => api.post('/aria-validation/validate-ai', data);
-export const generateAltTextAI = (data) => api.post('/alt-text/generate-ai', data);
+export const generateFixAI = (data, requestOptions = {}) => api.post('/fix-suggestions/generate-ai', data, requestOptions);
+export const generateAdaReportAI = (id, requestOptions = {}) => api.post(`/ada-reports/${id}/generate-ai`, undefined, requestOptions);
+export const generateVPAT = (id, requestOptions = {}) => api.post(`/ada-reports/${id}/generate-vpat`, undefined, requestOptions);
+export const analyzeContrastAI = (data, requestOptions = {}) => api.post('/color-contrast/analyze-ai', data, requestOptions);
+export const testScreenReaderAI = (data, requestOptions = {}) => api.post('/screen-reader/test-ai', data, requestOptions);
+export const testKeyboardNavAI = (data, requestOptions = {}) => api.post('/keyboard-nav/test-ai', data, requestOptions);
+export const validateAriaAI = (data, requestOptions = {}) => api.post('/aria-validation/validate-ai', data, requestOptions);
+export const generateAltTextAI = (data, requestOptions = {}) => api.post('/alt-text/generate-ai', data, requestOptions);
 export const scheduleAudit = (clientId, data) => api.post(`/clients/${clientId}/schedule-audit`, data);
 export const getClientBadge = (clientId) => api.get(`/clients/${clientId}/badge`);
 
@@ -71,17 +71,28 @@ export const createGovernedAudit = (data, idempotencyKey) =>
 export const submitGovernedAudit = (id) => api.post(`/governed-audits/${id}/submit`);
 export const reviewGovernedAudit = (id, data) => api.post(`/governed-audits/${id}/review`, data);
 
+// Actor-scoped deterministic remediation of stored, authorized HTML copies.
+export const authorizedRemediationsApi = {
+  getAll: () => api.get('/authorized-remediations'),
+  getById: (id) => api.get(`/authorized-remediations/${id}`),
+  create: (data) => api.post('/authorized-remediations', data),
+  update: (id, data) => api.put(`/authorized-remediations/${id}`, data),
+  preview: (id) => api.post(`/authorized-remediations/${id}/preview`),
+  apply: (id, data) => api.post(`/authorized-remediations/${id}/apply`, data),
+  remove: (id) => api.delete(`/authorized-remediations/${id}`),
+};
+
 // AI Tool endpoints under /api/ai/*
-export const validateHeadingsAI = (data) => api.post('/ai/validate-headings', data);
-export const auditFormsAI = (data) => api.post('/ai/audit-forms', data);
-export const prioritizeIssuesAI = (data) => api.post('/ai/prioritize-issues', data);
-export const checkLinkTextAI = (data) => api.post('/ai/check-link-text', data);
-export const checkMediaAI = (data) => api.post('/ai/check-media', data);
-export const convertSemanticAI = (data) => api.post('/ai/convert-semantic', data);
-export const readabilityScoreAI = (data) => api.post('/ai/readability-score', data);
-export const monitoringDashboardAI = () => api.get('/ai/monitoring-dashboard');
-export const generateAccessiblePalette = (data) => api.post('/ai/accessible-palette', data);
-export const remediationChat = (data) => api.post('/ai/remediation-chat', data);
+export const validateHeadingsAI = (data, requestOptions = {}) => api.post('/ai/validate-headings', data, requestOptions);
+export const auditFormsAI = (data, requestOptions = {}) => api.post('/ai/audit-forms', data, requestOptions);
+export const prioritizeIssuesAI = (data, requestOptions = {}) => api.post('/ai/prioritize-issues', data, requestOptions);
+export const checkLinkTextAI = (data, requestOptions = {}) => api.post('/ai/check-link-text', data, requestOptions);
+export const checkMediaAI = (data, requestOptions = {}) => api.post('/ai/check-media', data, requestOptions);
+export const convertSemanticAI = (data, requestOptions = {}) => api.post('/ai/convert-semantic', data, requestOptions);
+export const readabilityScoreAI = (data, requestOptions = {}) => api.post('/ai/readability-score', data, requestOptions);
+export const monitoringDashboardAI = (requestOptions = {}) => api.get('/ai/monitoring-dashboard', requestOptions);
+export const generateAccessiblePalette = (data, requestOptions = {}) => api.post('/ai/accessible-palette', data, requestOptions);
+export const remediationChat = (data, requestOptions = {}) => api.post('/ai/remediation-chat', data, requestOptions);
 export const getAIResults = (params = {}) => api.get('/ai/results', { params });
 
 export default api;

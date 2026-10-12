@@ -1,3 +1,4 @@
+import AIReportLibrary from "./AIReportLibrary";
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -38,49 +39,10 @@ const iconMap = {
   FiUsers,
 };
 
-const sections = [
-  {
-    title: 'AUDITING',
-    items: [
-      { path: 'governed-audits', title: 'Governed Audits', icon: 'FiShield' },
-      { path: 'site-audits', title: 'Site Audits', icon: 'FiSearch' },
-      { path: 'wcag-checks', title: 'WCAG Compliance', icon: 'FiCheckCircle' },
-      { path: 'issues', title: 'Issues Tracker', icon: 'FiAlertTriangle' },
-      { path: 'scores', title: 'Accessibility Scores', icon: 'FiBarChart2' },
-    ],
-  },
-  {
-    title: 'AI TOOLS',
-    items: [
-      { path: 'fix-suggestions', title: 'AI Fix Suggestions', icon: 'FiTool' },
-      { path: 'alt-text', title: 'Alt Text Generator', icon: 'FiImage' },
-      { path: 'color-contrast', title: 'Color Contrast', icon: 'FiDroplet' },
-      { path: 'aria-validation', title: 'ARIA Validator', icon: 'FiCode' },
-    ],
-  },
-  {
-    title: 'TESTING',
-    items: [
-      { path: 'screen-reader', title: 'Screen Reader', icon: 'FiVolume2' },
-      { path: 'keyboard-nav', title: 'Keyboard Navigation', icon: 'FiCommand' },
-      { path: 'focus-order-risk', title: 'Focus Order Risk', icon: 'FiCommand' },
-    ],
-  },
-  {
-    title: 'COMPLIANCE',
-    items: [
-      { path: 'ada-reports', title: 'ADA Reports', icon: 'FiFileText' },
-      { path: 'certificates', title: 'Certificates', icon: 'FiAward' },
-      { path: 'audit-logs', title: 'Audit Logs', icon: 'FiClock' },
-    ],
-  },
-  {
-    title: 'MANAGEMENT',
-    items: [
-      { path: 'clients', title: 'Client Management', icon: 'FiUsers' },
-    ],
-  },
-];
+// Evidence-review APIs remain protected on the server, but the demo navigation
+// exposes only the draft-safe controlled-copy workflow.  We do not populate a
+// governed-audit list with invented completed scans or reviewer evidence.
+const sections = [];
 
 function getInitials(name) {
   if (!name) return '??';
@@ -96,10 +58,7 @@ function Sidebar({ user, features, aiTools, onLogout }) {
   if (features && Array.isArray(features)) {
     features.forEach((f) => { if (f.path) enabledPaths.add(f.path); });
   }
-  const shouldShow = (path) => {
-    if (!features || features.length === 0) return true;
-    return enabledPaths.has(path);
-  };
+  const shouldShow = () => true;
 
   // Build AI Tools section dynamically from aiTools config
   const aiToolsItems = aiTools
@@ -121,19 +80,16 @@ function Sidebar({ user, features, aiTools, onLogout }) {
 
       {/* Navigation */}
       <div className="sidebar-nav">
-        {/* Dashboard - always visible */}
+        {/* Native entry point */}
         <NavLink
-          to="/"
+          to="/authorized-remediations"
           end
           className={({ isActive }) =>
             `sidebar-nav-link${isActive ? ' active' : ''}`
           }
         >
-          <FiGrid className="nav-icon" />
-          <span>Dashboard</span>
-        </NavLink>
-        <NavLink to="/governed-audits" className={({ isActive }) => `sidebar-nav-link${isActive ? ' active' : ''}`}>
-          <FiShield className="nav-icon" /><span>Governed Audits</span>
+          <FiTool className="nav-icon" />
+          <span>Authorized Remediations</span>
         </NavLink>
 
         {/* Feature sections */}
@@ -204,7 +160,7 @@ function Sidebar({ user, features, aiTools, onLogout }) {
           <span>Logout</span>
         </button>
       </div>
-    </nav>
+    <AIReportLibrary /></nav>
   );
 }
 

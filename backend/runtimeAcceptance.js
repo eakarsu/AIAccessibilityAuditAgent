@@ -30,8 +30,11 @@ function query(sql, rows = false) {
 // Schema creation and operator provisioning are explicit opt-in operations.
 // Normal boots never run DDL and never rewrite an existing operator password.
 if (String(process.env.RUNTIME_SETUP || '') === '1') {
-  const adminEmail = String(process.env.PROVISION_ADMIN_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  const adminPassword = String(process.env.PROVISION_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '');
+  // Setup is deliberately bound to the explicit provisioning variables.  Do
+  // not inherit a legacy ADMIN_* account from dotenv: an operator must opt in
+  // to both setup and the exact account being created.
+  const adminEmail = String(process.env.PROVISION_ADMIN_EMAIL || '').trim().toLowerCase();
+  const adminPassword = String(process.env.PROVISION_ADMIN_PASSWORD || '');
   if (!adminEmail || adminPassword.length < 12) throw new Error('Runtime administrator credentials are required when RUNTIME_SETUP=1');
 
   function hashPassword(password) {

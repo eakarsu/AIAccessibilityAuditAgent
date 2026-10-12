@@ -10,13 +10,12 @@ function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const performLogin = async (loginEmail, loginPassword) => {
     setError('');
     setLoading(true);
 
     try {
-      const res = await login(email, password);
+      const res = await login(loginEmail, loginPassword);
       localStorage.setItem('token', res.data.token);
       onLogin(res.data.user);
     } catch (err) {
@@ -27,6 +26,19 @@ function Login({ onLogin }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    performLogin(email, password);
+  };
+
+  const handleDemoLogin = () => {
+    const demoEmail = import.meta.env.VITE_DEMO_EMAIL || '';
+    const demoPassword = import.meta.env.VITE_DEMO_PASSWORD || '';
+    if (!demoEmail || !demoPassword) { setError('Demo login is not configured for this environment.'); return; }
+    setEmail(demoEmail); setPassword(demoPassword);
+    performLogin(demoEmail, demoPassword);
   };
 
   return (
@@ -83,12 +95,12 @@ function Login({ onLogin }) {
 
           <button
             type="button"
-            onClick={async (event) => { await (() => { setEmail(import.meta.env.VITE_DEMO_EMAIL || ''); setPassword(import.meta.env.VITE_DEMO_PASSWORD || ''); })(event); window.setTimeout(() => { const form = document.querySelector("form"); if (form) form.requestSubmit(); }, 150); }}
+            onClick={handleDemoLogin}
             disabled={!import.meta.env.VITE_DEMO_EMAIL || !import.meta.env.VITE_DEMO_PASSWORD}
             aria-label="Log In as Demo"
             style={{ width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', cursor: 'pointer' }}
           >
-            Log In as Demo
+            {loading ? 'Signing in…' : 'Log In as Demo'}
           </button>
           <button type="submit" className="login-btn" disabled={loading}>
             {loading ? (

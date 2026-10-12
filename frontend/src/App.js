@@ -8,7 +8,10 @@ import FeaturePage from './pages/FeaturePage';
 import AIToolPage from './pages/AIToolPage';
 import FocusOrderRisk from './pages/FocusOrderRisk';
 import GovernedAudits from './pages/GovernedAudits';
+import AuthorizedRemediations from './pages/AuthorizedRemediations';
 import { getMe } from './services/api';
+import AIWorkspace from './components/AIWorkspace';
+import workspaceFeatures from './components/aiWorkspaceFeatures.json';
 
 import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
 import CodexOperationsFeature from './pages/CodexOperationsFeature';
@@ -140,6 +143,10 @@ const aiToolConfigs = {
     customApiCall: true,
   },
 };
+
+const workspaceNavigation = Object.fromEntries(
+  workspaceFeatures.map((feature) => [`ai/${feature.id}`, feature])
+);
 
 function App() {
   const [user, setUser] = useState(null);
@@ -337,22 +344,15 @@ function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar user={user} features={features} aiTools={aiToolConfigs} onLogout={() => { localStorage.removeItem('token'); setUser(null); }} />
+      <Sidebar user={user} features={features} aiTools={workspaceNavigation} onLogout={() => { localStorage.removeItem('token'); setUser(null); }} />
       <main className="main-content">
         <Routes>
-        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
-        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
-
-          <Route path="/" element={<Dashboard features={features} aiTools={aiToolConfigs} />} />
-          {features.map(f => (
-            <Route key={f.path} path={`/${f.path}`} element={<FeaturePage config={f} />} />
+          <Route path="/" element={<Navigate to="/authorized-remediations" replace />} />
+          <Route path="/authorized-remediations" element={<AuthorizedRemediations />} />
+          {workspaceFeatures.map((feature) => (
+            <Route key={feature.id} path={`/ai/${feature.id}`} element={<AIWorkspace feature={feature} />} />
           ))}
-          {Object.entries(aiToolConfigs).map(([slug, cfg]) => (
-            <Route key={slug} path={`/${slug}`} element={<AIToolPage config={cfg} />} />
-          ))}
-          <Route path="/focus-order-risk" element={<FocusOrderRisk />} />
-          <Route path="/governed-audits" element={<GovernedAudits user={user} />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/authorized-remediations" replace />} />
         </Routes>
       </main>
     </div>

@@ -1,3 +1,6 @@
+import AIFieldPresets, { completeExample } from './AIFieldPresets';
+import AIResultView from './AIResultView';
+import useCancelableAI from './useCancelableAI';
 import React, { useState, useEffect } from 'react';
 import { FiZap, FiLoader, FiAlertCircle, FiCpu, FiDownload } from 'react-icons/fi';
 import * as api from '../services/api';
@@ -13,59 +16,27 @@ import * as api from '../services/api';
  */
 export default function AIToolPage({ config }) {
   const [formData, setFormData] = useState({});
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [referenceRows, setReferenceRows] = useState([]);
+  const [referenceError, setReferenceError] = useState('');
+  const referenceFields = (config.fields || []).map((field) => field.name === 'issue_id' || config.customApiCall && field.name === 'id' ? { ...field, type: 'select', requiresExistingRecord: true, options: referenceRows.map((row) => ({ value: String(row.id), label: row.title || row.report_title || row.description || row.id })) } : field);
+
+  const aiRequest = useCancelableAI();
+  const { loading, error, setError, result: result, setResult: setResult } = aiRequest;
+
+
 
   useEffect(() => {
-    setFormData({});
-    setResult(null);
-    setError(null);
-    if (config.autoLoad) {
-      runRequest({});
-    }
-    // eslint-disable-next-line
+    let active = true;
+    aiRequest.cancel(); setFormData({}); setResult(null); setError(null);
+    setReferenceRows([]); setReferenceError('');
+    const resource = config.customApiCall ? api.adaReportsApi : (config.fields || []).some((field) => field.name === 'issue_id') ? api.issuesApi : null;
+    if (resource) resource.getAll({ limit: 100 }).then((response) => { if (!active) return; const rows = response.data?.data || response.data?.items || response.data; setReferenceRows(Array.isArray(rows) ? rows : []); }).catch(() => { if (active) setReferenceError('Saved record references could not be loaded. Select a record when the connection is available.'); });
+    if (config.autoLoad) runRequest({});
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.apiCall]);
 
-  const runRequest = async (data) => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      // Coerce JSON fields
-      const payload = { ...data };
-      (config.fields || []).forEach((f) => {
-        if (f.type === 'json' && payload[f.name]) {
-          try {
-            payload[f.name] = JSON.parse(payload[f.name]);
-          } catch (_) {
-            // leave as is
-          }
-        }
-        if (f.type === 'csv' && payload[f.name]) {
-          payload[f.name] = String(payload[f.name])
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean);
-        }
-      });
-
-      const fn = api[config.apiCall];
-      if (!fn) throw new Error(`API method ${config.apiCall} not found`);
-      // Support custom calls where a single id field is passed as arg
-      let res;
-      if (config.customApiCall && payload.id) {
-        res = await fn(payload.id);
-      } else {
-        res = config.method === 'get' ? await fn() : await fn(payload);
-      }
-      setResult(res.data);
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Request failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const runRequest = async (data) => aiRequest.run(async (options) => { const payload = { ...data }; for (const field of config.fields || []) { if (field.type === 'json' && payload[field.name]) { try { payload[field.name] = JSON.parse(payload[field.name]); } catch (_) { throw new Error(field.label + ': enter valid structured data.'); } } if (field.type === 'csv' && payload[field.name]) payload[field.name] = String(payload[field.name]).split(',').map((item) => item.trim()).filter(Boolean); } const fn = api[config.apiCall]; if (!fn) throw new Error('API method unavailable: ' + config.apiCall); const res = config.customApiCall && payload.id ? await fn(payload.id, options) : config.method === 'get' ? await fn(options) : await fn(payload, options); return res.data; });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -82,13 +53,19 @@ export default function AIToolPage({ config }) {
           <p className="fp-subtitle">{config.subtitle}</p>
         </div>
       </div>
+      {config.autoLoad && <div className="sr-actions"><button type="button" className="fp-btn" disabled={loading} onClick={() => runRequest({})}>Refresh</button>{loading && <button type="button" className="fp-btn" onClick={aiRequest.cancel}>Cancel</button>}</div>}
+
 
       <div className="fp-content" style={{ display: 'block' }}>
         {!config.autoLoad && (
           <div className="fp-detail" style={{ position: 'static', maxWidth: 'none' }}>
             <div className="fp-detail-body">
               <form onSubmit={handleSubmit} className="fp-form">
-                {(config.fields || []).map((f) => (
+                {referenceError && <p className="sr-notice" role="status">{referenceError}</p> }
+
+            <AIFieldPresets fields={referenceFields} samples={[]} context={config.title} disabled={loading} onFill={(sample, index) => { setFormData(completeExample(referenceFields, sample, index, config.title, formData)); aiRequest.setResult(null); }} />
+
+                {referenceFields.map((f) => (
                   <div key={f.name} className="fp-form-group">
                     <label className="fp-form-label">
                       {f.label}{f.required && <span className="fp-required"> *</span>}
@@ -111,7 +88,7 @@ export default function AIToolPage({ config }) {
                       >
                         <option value="">Select...</option>
                         {(f.options || []).map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
+                          <option key={typeof opt === 'object' ? opt.value : opt} value={typeof opt === 'object' ? opt.value : opt}>{typeof opt === 'object' ? opt.label : opt}</option>
                         ))}
                       </select>
                     ) : (
@@ -131,7 +108,7 @@ export default function AIToolPage({ config }) {
                   <button type="submit" className="fp-btn fp-btn-ai" disabled={loading}>
                     {loading ? <FiLoader className="fp-spin" /> : <FiZap />} Run Analysis
                   </button>
-                </div>
+                {loading && <button type="button" className="fp-btn" onClick={aiRequest.cancel}>Cancel</button>}</div>
               </form>
             </div>
           </div>
@@ -150,78 +127,8 @@ export default function AIToolPage({ config }) {
           </div>
         )}
 
-        {result && (
-          <div className="fp-detail" style={{ marginTop: 20, position: 'static', maxWidth: 'none' }}>
-            <div className="fp-detail-header">
-              <h2 className="fp-detail-title"><FiCpu /> Result</h2>
-              <button
-                className="fp-btn fp-btn-edit"
-                style={{ marginLeft: 'auto' }}
-                onClick={() => {
-                  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `${config.title.replace(/\s+/g, '-').toLowerCase()}-result.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                <FiDownload /> Export JSON
-              </button>
-            </div>
-            <div className="fp-detail-body">
-              <ResultRenderer data={result} />
-            </div>
-          </div>
-        )}
+        <AIResultView result={result} loading={loading} error={error} title={config.title} />
       </div>
     </div>
   );
-}
-
-function ResultRenderer({ data }) {
-  if (data === null || data === undefined) return <span className="fp-muted">—</span>;
-  if (typeof data === 'string') {
-    // Try parse JSON
-    try {
-      const parsed = JSON.parse(data);
-      return <ResultRenderer data={parsed} />;
-    } catch {
-      return <pre className="fp-code-block">{data}</pre>;
-    }
-  }
-  if (Array.isArray(data)) {
-    if (data.length === 0) return <p className="fp-muted">Empty list</p>;
-    return (
-      <div className="fp-ai-cards">
-        {data.map((item, i) => (
-          <div key={i} className="fp-ai-card">
-            {typeof item === 'object' ? <ResultRenderer data={item} /> : String(item)}
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (typeof data === 'object') {
-    return (
-      <div className="fp-ai-sections">
-        {Object.entries(data).map(([key, value]) => (
-          <div key={key} className="fp-ai-section">
-            <h4 className="fp-ai-section-title">{formatKey(key)}</h4>
-            <ResultRenderer data={value} />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  if (typeof data === 'boolean') {
-    const c = data ? '#10b981' : '#ef4444';
-    return <span className="fp-badge" style={{ background: `${c}18`, color: c, border: `1px solid ${c}40` }}>{data ? 'Yes' : 'No'}</span>;
-  }
-  return <span>{String(data)}</span>;
-}
-
-function formatKey(k) {
-  return String(k).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

@@ -15,16 +15,16 @@ async function main() {
     throw new Error('A valid operator email, password of at least 12 characters, and tenant ID are required');
   }
   const passwordHash = await bcrypt.hash(password, 12);
-  await pool.query(
+  const result = await pool.query(
     `INSERT INTO users (email, password_hash, full_name, role, tenant_id)
      VALUES ($1, $2, $3, 'admin', $4)
-     ON CONFLICT (email) DO UPDATE
-       SET password_hash = EXCLUDED.password_hash,
-           full_name = EXCLUDED.full_name,
-           role = 'admin',
-           tenant_id = EXCLUDED.tenant_id`,
+     ON CONFLICT (email) DO NOTHING
+     RETURNING id`,
     [email, passwordHash, fullName, tenantId]
   );
+  if (!result.rows.length) {
+    throw new Error('Operator already exists; refusing to change its password, role, name, or tenant.');
+  }
 }
 
 main()

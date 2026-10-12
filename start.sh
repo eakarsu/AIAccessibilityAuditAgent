@@ -83,9 +83,9 @@ export RUNTIME_AI_ENDPOINT="/api/ai/accessibility-audit-review"
 export RUNTIME_AI_FEATURE="accessibility-audit-review"
 export RUNTIME_AI_SYSTEM_PROMPT="Review accessibility evidence against WCAG expectations, identify reproducible findings, and distinguish automated checks from required human review."
 test -d backend/node_modules && test -d frontend/node_modules || { echo 'Dependencies absent; run scripts/bootstrap.sh.' >&2; exit 1; }
-if [[ "${BOOTSTRAP_ACKNOWLEDGEMENT:-}" == "create-initial-admin" ]]; then
-  npm --prefix backend run create-admin
-fi
+# Startup is read-only with respect to accounts. Provisioning is an explicit,
+# separate operator action (`npm --prefix backend run create-admin`) and the
+# provisioning script refuses to alter an existing account.
 for port in "$BACKEND_PORT" "$FRONTEND_PORT"; do if lsof -ti ":$port" >/dev/null 2>&1; then echo "Port $port is occupied; refusing to terminate another process." >&2; exit 1; fi; done
 (cd backend && npm start) & backend_pid=$!
 (cd frontend && HOST=127.0.0.1 PORT="$FRONTEND_PORT" VITE_API_URL="/api" npm start) & frontend_pid=$!
