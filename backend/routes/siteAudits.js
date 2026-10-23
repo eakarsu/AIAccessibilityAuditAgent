@@ -93,6 +93,8 @@ router.get('/', authenticateToken, async (req, res) => {
 
     if (client_id) { conditions.push(`client_id = $${params.length + 1}`); params.push(client_id); }
     if (status) { conditions.push(`status = $${params.length + 1}`); params.push(status); }
+    const search = (req.query.search || '').trim();
+    if (search) { conditions.push(`url ILIKE $${params.length + 1}`); params.push(`%${search}%`); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const query = `SELECT * FROM site_audits ${where} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -113,6 +115,23 @@ router.get('/', authenticateToken, async (req, res) => {
     console.error('Get site audits error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// GET /api/site-audits/export?format=csv|json - export filtered audits
+router.get('/export', authenticateToken, async (req, res) => {
+  try {
+    const { client_id, status } = req.query;
+    const search = (req.query.search || '').trim();
+    const conditions = []; const params = [];
+    if (client_id) { conditions.push(`client_id = $${params.length + 1}`); params.push(client_id); }
+    if (status) { conditions.push(`status = $${params.length + 1}`); params.push(status); }
+    if (search) { conditions.push(`url ILIKE $${params.length + 1}`); params.push(`%${search}%`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const result = await pool.query(`SELECT * FROM site_audits ${where} ORDER BY created_at DESC LIMIT 1000`, params);
+    if ((req.query.format || 'csv') === 'json') return res.json({ data: result.rows });
+    res.setHeader('Content-Type', 'text/csv'); res.setHeader('Content-Disposition', 'attachment; filename="site-audits.csv"');
+    res.send(require('../domain/taskPolicy').toCsv(result.rows));
+  } catch (err) { res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // GET /api/site-audits/:id

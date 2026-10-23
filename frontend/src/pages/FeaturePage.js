@@ -246,6 +246,7 @@ export default function FeaturePage({ config }) {
     (config.formFields || []).forEach(f => { init[f.name] = item[f.name] ?? ''; });
     setFormData(init);
     setEditingItem(item);
+    setSelectedItem(null);
     setShowForm(true);
   };
 
@@ -320,7 +321,7 @@ export default function FeaturePage({ config }) {
 
       <div className="fp-content">
         {/* Table */}
-        <div className={`fp-table-container ${selectedItem ? 'fp-table-shrink' : ''}`}>
+        <div className="fp-table-container">
           {loading ? (
             <div className="fp-empty"><FiLoader className="fp-spin" /> Loading...</div>
           ) : filteredItems.length === 0 ? (
@@ -347,45 +348,44 @@ export default function FeaturePage({ config }) {
           )}
         </div>
 
-        {/* Detail Panel */}
+        {/* Detail Modal */}
         {selectedItem && (
-          <div className="fp-detail">
-            <div className="fp-detail-header">
-              <h2 className="fp-detail-title">{String(selectedItem[config.columns[0]] || '').slice(0, 60) || `Item`}</h2>
-              <button className="fp-close-btn" onClick={() => setSelectedItem(null)}><FiX /></button>
-            </div>
-            <div className="fp-detail-body">
-              <div className="fp-field-grid">
-                {Object.entries(selectedItem).filter(([k]) => k !== 'password_hash').map(([key, value]) => (
-                  <div key={key} className="fp-field-item">
-                    <span className="fp-field-label">{formatLabel(key)}</span>
-                    <span className="fp-field-value">{renderDetailValue(key, value)}</span>
-                  </div>
-                ))}
+          <div className="fp-overlay modal-overlay" onClick={() => setSelectedItem(null)}>
+            <div className="fp-modal modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} style={{ maxWidth: 680 }}>
+              <div className="fp-modal-header modal-header">
+                <h2 className="fp-detail-title">{String(selectedItem[config.columns[0]] || '').slice(0, 60) || `Item`}</h2>
+                <button className="fp-close-btn modal-close" onClick={() => setSelectedItem(null)}><FiX /></button>
               </div>
-
-              <div className="fp-actions">
-                {!config.readOnly && (
-                  <>
-                    <button className="fp-btn fp-btn-edit" onClick={() => openEditForm(selectedItem)}><FiEdit2 /> Edit</button>
-                    <button className="fp-btn fp-btn-delete" onClick={() => setDeleteConfirm(selectedItem)}><FiTrash2 /> Delete</button>
-                  </>
-                )}
-                {config.hasAI && (
-                  <button className="fp-btn fp-btn-ai" onClick={() => handleAIAction(selectedItem)} disabled={aiLoading}>
-                    {aiLoading ? <FiLoader className="fp-spin" /> : <FiZap />} {config.aiLabel || 'Run AI'}
-                  </button>
-                )}
-              </div>
-
-              {showAIResult && (
-                <div className="fp-ai-section-wrap">
-                  <h3 className="fp-ai-title"><FiZap /> AI Analysis Result</h3>
-                  {aiLoading ? (
-                    <div className="fp-ai-loading"><FiLoader className="fp-spin-lg" /><p>AI is analyzing...</p></div>
-                  ) : aiResult ? renderAIResult(aiResult) : null}
+              <div className="fp-detail-body modal-body">
+                <div className="fp-field-grid">
+                  {Object.entries(selectedItem).filter(([k]) => k !== 'password_hash').map(([key, value]) => (
+                    <div key={key} className="fp-field-item">
+                      <span className="fp-field-label">{formatLabel(key)}</span>
+                      <span className="fp-field-value">{renderDetailValue(key, value)}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
+
+                <div className="fp-actions modal-actions">
+                  <button className="fp-btn fp-btn-edit" onClick={() => openEditForm(selectedItem)}><FiEdit2 /> Edit</button>
+                  <button className="fp-btn fp-btn-delete" onClick={() => setDeleteConfirm(selectedItem)}><FiTrash2 /> Delete</button>
+                  <button className="fp-btn fp-btn-cancel btn-cancel" onClick={() => setSelectedItem(null)}>Cancel</button>
+                  {config.hasAI && (
+                    <button className="fp-btn fp-btn-ai" onClick={() => handleAIAction(selectedItem)} disabled={aiLoading}>
+                      {aiLoading ? <FiLoader className="fp-spin" /> : <FiZap />} {config.aiLabel || 'Run AI'}
+                    </button>
+                  )}
+                </div>
+
+                {showAIResult && (
+                  <div className="fp-ai-section-wrap">
+                    <h3 className="fp-ai-title"><FiZap /> AI Analysis Result</h3>
+                    {aiLoading ? (
+                      <div className="fp-ai-loading"><FiLoader className="fp-spin-lg" /><p>AI is analyzing...</p></div>
+                    ) : aiResult ? renderAIResult(aiResult) : null}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

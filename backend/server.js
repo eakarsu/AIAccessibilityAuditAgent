@@ -72,6 +72,7 @@ app.use('/api', generalLimiter, require('./routes/notificationsWebhooks')(requir
 app.use('/api/dashboard', generalLimiter, require('./routes/dashboard'));
 app.use('/api/clients', generalLimiter, require('./routes/clients'));
 app.use('/api/site-audits', auditRateLimiter, require('./routes/siteAudits'));
+  app.use('/api/tasks', generalLimiter, require('./routes/tasks'));
 app.use('/api/ai', aiRateLimiter, require('./routes/aiAudit'));
 app.use('/api/accessibility', generalLimiter, require('./routes/accessibilityTools'));
 app.use('/api/wcag-checks', generalLimiter, require('./routes/wcagChecks'));
